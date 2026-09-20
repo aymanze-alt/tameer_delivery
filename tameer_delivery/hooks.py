@@ -11,15 +11,14 @@ app_license = "mit"
 required_apps = ["erpnext"]
 
 # Each item in the list will be shown as an app in the apps page
-# add_to_apps_screen = [
-# 	{
-# 		"name": "tameer_delivery",
-# 		"logo": "/assets/tameer_delivery/logo.png",
-# 		"title": "Tameer Delivery",
-# 		"route": "/tameer_delivery",
-# 		"has_permission": "tameer_delivery.api.permission.has_app_permission"
-# 	}
-# ]
+add_to_apps_screen = [
+	{
+		"name": "tameer_delivery",
+		"logo": "/assets/tameer_delivery/logo.svg",
+		"title": "Tameer Delivery",
+		"route": "/app/tameer-delivery",
+	}
+]
 
 # Includes in <head>
 # ------------------
