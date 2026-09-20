@@ -1,0 +1,36 @@
+Source String,Translation
+Delivery Proof,إثبات التوصيل
+Shipment,شحنة
+Driver,سائق
+Delivery Status,حالة التوصيل
+Delivery Date Time,تاريخ ووقت التوصيل
+Customer,العميل
+Delivery Address,عنوان التوصيل
+Received By,اسم المستلِم
+Remark,ملاحظات
+Proof of Delivery,إثبات التوصيل
+Customer Signature,توقيع العميل
+Proof Photo,صورة الإثبات
+Delivery Location,موقع التوصيل
+Latitude,خط العرض
+Longitude,خط الطول
+GPS Accuracy (m),دقة تحديد الموقع (م)
+Location Preview,معاينة الموقع
+Delivery Driver,سائق التوصيل
+Delivery Proof,إثبات التوصيل
+Not Delivered,لم يتم التوصيل
+Delivered,تم التوصيل
+Failed,فشل التوصيل
+Partially Delivered,توصيل جزئي
+In Transit,قيد التوصيل
+Driver Location Log,سجل موقع السائق
+Ping Time,وقت الاتصال
+Accuracy (m),الدقة (م)
+Speed (km/h),السرعة (كم/ساعة)
+Heading (deg),الاتجاه (درجة)
+Source,المصدر
+Device,الجهاز
+Web,ويب
+Manual,يدوي
+Dashboard,الرئيسية
+Driver Tracking,تتبع السائقين

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<title data-i18n="tracking.title">Tameer Delivery — Live Tracking</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+	<link rel="stylesheet" href="/assets/tameer_delivery/css/delivery.css">
+</head>
+<body>
+	<header class="topbar">
+		<span class="tb-brand">
+			<span class="tb-logo">T</span>
+			<span class="tb-title"><span data-i18n="app.name"></span><small data-i18n="tracking"></small></span>
+		</span>
+		<span class="tb-spacer"></span>
+		<button class="icon-btn lang-toggle" id="langToggle" onclick="TD.toggleLang()">العربية</button>
+		<a class="icon-btn" href="/delivery" style="text-decoration:none" data-i18n="dashboard">Dashboard</a>
+		<a class="icon-btn" href="/api/method/logout" style="text-decoration:none" data-i18n="sign.out">Sign out</a>
+	</header>
+
+	<div class="app app-tracking">
+		<div class="tracking-grid">
+			<div class="driver-panel">
+				<div class="section"><div class="section-title">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 7h8m8 0h6M8 7a3 3 0 1 0-6 0 3 3 0 0 0 6 0zm13 0a3 3 0 1 0 6 0 3 3 0 0 0-6 0z"/><circle cx="12" cy="17" r="3"/><path d="M9 17H1m22 0h-8"/></svg>
+					<span data-i18n="tracking"></span>
+				</div></div>
+				<div class="driver-list" id="driverList"><div class="spinner"></div></div>
+			</div>
+
+			<div class="map-shell">
+				<div id="trackMap"></div>
+				<div class="map-topline">
+					<span class="map-chip" id="liveCount">0 <span data-i18n="drivers.live"></span></span>
+					<span class="map-chip">● <span data-i18n="live.label"></span></span>
+					<span class="map-chip" id="lastPing"><span data-i18n="tracking.sub"></span>: —</span>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div id="toast"></div>
+
+	<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+	<script>
+		window.TD_CONFIG = { csrf_token: "{{ csrf_token }}", user: "{{ user_fullname }}" };
+	</script>
+	<script src="/assets/tameer_delivery/js/delivery_core.js"></script>
+	<script>
+		(function () {
+			let map, markers = {}, focused = null, timer = null;
+
+			TD.track = {
+				init: function () {
+					map = L.map("trackMap", { zoomControl: true, attributionControl: true }).setView([24.7136, 46.6753], 6);
+					L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+						maxZoom: 19, attribution: '&copy; OpenStreetMap'
+					}).addTo(map);
+					TD.track.refresh();
+					timer = setInterval(TD.track.refresh, 10000);
+					window.addEventListener("focus", TD.track.refresh);
+				},
+				refresh: function () {
+					TD.api("tameer_delivery.api.get_driver_locations", { minutes: 15 }).then(function (drivers) {
+						render(drivers || []);
+						focusDriver(focused);
+					}).catch(function (e) {
+						document.getElementById("driverList").innerHTML =
+							'<div class="empty"><h3>' + (e.exc_type === "PermissionError" ? TD.t("err.perm") : TD.t("err.network")) + "</h3></div>";
+					});
+				}
+			};
+
+			function render(drivers) {
+				const list = document.getElementById("driverList");
+				const seen = {};
+				if (!drivers.length) {
+					list.innerHTML = '<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><h3 data-i18n="no.drivers"></h3></div>';
+					TD.applyLang();
+				}
+				drivers.forEach(function (d) {
+					seen[d.driver] = true;
+					const age = d.age_seconds;
+					const cls = age < 60 ? "live" : age < 300 ? "warm" : "cold";
+					if (markers[d.driver]) {
+						markers[d.driver].setLatLng([d.latitude, d.longitude]);
+						markers[d.driver].setIcon(icon(cls));
+					} else {
+						markers[d.driver] = L.marker([d.latitude, d.longitude], { icon: icon(cls) })
+							.addTo(map).bindPopup(popup(d));
+					}
+					markers[d.driver]._data = d;
+				});
+				// remove offline drivers
+				Object.keys(markers).forEach(function (k) { if (!seen[k]) { map.removeLayer(markers[k]); delete markers[k]; } });
+
+				list.innerHTML = drivers.slice().sort(function (a, b) { return a.age_seconds - b.age_seconds; }).map(function (d) {
+					const age = d.age_seconds;
+					const initials = (d.full_name || d.driver).split(" ").map(function (w) { return w[0]; }).slice(0, 2).join("").toUpperCase();
+					return '<div class="drv" data-driver="' + TD.esc(d.driver) + '" onclick="TD.track.focusOf(\'' + TD.esc(d.driver) + '\')">'
+						+ '<div class="drv-av">' + initials + "</div>"
+						+ '<div class="drv-body"><div class="drv-name">' + TD.esc(d.full_name || d.driver) + "</div>"
+						+ '<div class="drv-sub">' + (d.current_shipment ? "📦 #" + TD.esc(d.current_shipment.name) + " · " + TD.esc(d.current_shipment.delivery_customer || "—") : TD.t("no.assign")) + "</div></div>"
+						+ '<div class="drv-age ' + cls + '">' + TD.age(d.ping_time) + "</div>"
+						+ "</div>";
+				}).join("");
+
+				document.getElementById("liveCount").innerHTML = drivers.length + ' <span data-i18n="drivers.live"></span>';
+				document.getElementById("lastPing").innerHTML = '<span data-i18n="tracking.sub"></span>: ' + new Date().toLocaleTimeString(TD.lang === "ar" ? "ar" : "en", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+				TD.applyLang();
+			}
+
+			function icon(cls) {
+				const color = { live: "#2ed573", warm: "#ffb020", cold: "#ff5f56" }[cls] || "#2ed573";
+				const style = "width:16px;height:16px;border-radius:50%;background:" + color
+					+ ";border:3px solid rgba(255,255,255,.85);box-shadow:0 0 0 6px " + color + "33, 0 0 18px " + color
+					+ ";";
+				return L.divIcon({ className: "pulse", html: '<div style="' + style + '"></div>', iconSize: [16, 16], iconAnchor: [8, 8] });
+			}
+
+			function popup(d) {
+				const cur = d.current_shipment;
+				return "<b>" + TD.esc(d.full_name || d.driver) + "</b><br/>"
+					+ TD.t("last.ping") + ": <b>" + TD.age(d.ping_time) + "</b> (" + TD.t("loc.acc") + " ±" + Math.round(d.accuracy || 0) + "m)<br/>"
+					+ (d.speed ? "🚗 " + Math.round(d.speed) + " km/h<br/>" : "")
+					+ (cur ? TD.t("cur.shipment") + ": <a href='/app/shipment/" + TD.esc(cur.name) + "'>#" + TD.esc(cur.name) + "</a> — " + TD.esc(cur.delivery_customer || "") : TD.t("no.assign"));
+			}
+
+			TD.track.focusOf = function (driver) {
+				focused = driver;
+				document.querySelectorAll(".drv").forEach(function (el) {
+					el.classList.toggle("active", el.getAttribute("data-driver") === driver);
+				});
+				const m = markers[driver];
+				if (m) map.setView(m.getLatLng(), 12);
+			};
+
+			function focusDriver(driver) {
+				if (!driver) return;
+				const m = markers[driver];
+				if (m && !map.getBounds().contains(m.getLatLng())) map.setView(m.getLatLng(), 12);
+			}
+
+			TD.track.init();
+		})();
+	</script>
+</body>
+</html>

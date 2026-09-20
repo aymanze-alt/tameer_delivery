@@ -1,0 +1,213 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:DP-{YYYY}-{####}",
+ "creation": "2026-09-20 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_proof",
+  "shipment",
+  "driver",
+  "delivery_status",
+  "delivery_datetime",
+  "column_break_details",
+  "customer",
+  "delivery_address",
+  "received_by",
+  "remark",
+  "section_break_signature",
+  "column_break_signature",
+  "signature",
+  "column_break_photo",
+  "proof_photo",
+  "section_break_location",
+  "latitude",
+  "longitude",
+  "geo_accuracy",
+  "column_break_location_info",
+  "location_preview",
+  "section_break_read_only",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_proof",
+   "fieldtype": "Section Break",
+   "label": "Delivery Details"
+  },
+  {
+   "fieldname": "shipment",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Shipment",
+   "options": "Shipment",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "driver",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Driver",
+   "options": "User",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "default": "Delivered",
+   "fieldname": "delivery_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Delivery Status",
+   "options": "Delivered\nFailed\nPartially Delivered"
+  },
+  {
+   "fieldname": "delivery_datetime",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Delivery Date Time"
+  },
+  {
+   "fieldname": "column_break_details",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Customer",
+   "read_only": 1
+  },
+  {
+   "fieldname": "delivery_address",
+   "fieldtype": "Small Text",
+   "label": "Delivery Address",
+   "read_only": 1
+  },
+  {
+   "fieldname": "received_by",
+   "fieldtype": "Data",
+   "label": "Received By",
+   "reqd": 1
+  },
+  {
+   "fieldname": "remark",
+   "fieldtype": "Small Text",
+   "label": "Remark"
+  },
+  {
+   "fieldname": "section_break_signature",
+   "fieldtype": "Section Break",
+   "label": "Proof of Delivery"
+  },
+  {
+   "fieldname": "column_break_signature",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "signature",
+   "fieldtype": "Attach Image",
+   "label": "Customer Signature"
+  },
+  {
+   "fieldname": "column_break_photo",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "proof_photo",
+   "fieldtype": "Attach Image",
+   "label": "Proof Photo"
+  },
+  {
+   "fieldname": "section_break_location",
+   "fieldtype": "Section Break",
+   "label": "Delivery Location"
+  },
+  {
+   "fieldname": "latitude",
+   "fieldtype": "Float",
+   "label": "Latitude",
+   "precision": "6"
+  },
+  {
+   "fieldname": "longitude",
+   "fieldtype": "Float",
+   "label": "Longitude",
+   "precision": "6"
+  },
+  {
+   "fieldname": "geo_accuracy",
+   "fieldtype": "Float",
+   "label": "GPS Accuracy (m)",
+   "precision": "1"
+  },
+  {
+   "fieldname": "column_break_location_info",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "location_preview",
+   "fieldtype": "Text",
+   "label": "Location Preview",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_read_only",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Delivery Proof",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 0,
+ "is_submittable": 0,
+ "links": [
+  {
+   "link_doctype": "Shipment",
+   "link_fieldname": "name"
+  }
+ ],
+ "modified": "2026-09-20 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Tameer Delivery",
+ "name": "Delivery Proof",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Driver",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

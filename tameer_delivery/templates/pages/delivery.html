@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<title data-i18n="app.name">Tameer Delivery</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+	<link rel="stylesheet" href="/assets/tameer_delivery/css/delivery.css">
+</head>
+<body>
+	<header class="topbar">
+		<span class="tb-brand">
+			<span class="tb-logo">T</span>
+			<span class="tb-title"><span data-i18n="app.name"></span><small data-i18n="app.tag"></small></span>
+		</span>
+		<span class="tb-spacer"></span>
+		<span class="live-ind" id="liveInd" style="display:none">
+			<span class="pill ps-In"><span class="dot"></span><span data-i18n="log"></span></span>
+		</span>
+		<button class="icon-btn lang-toggle" id="langToggle" onclick="TD.toggleLang()">العربية</button>
+		<a class="icon-btn" href="/api/method/logout" style="text-decoration:none" data-i18n="sign.out">Sign out</a>
+	</header>
+
+	<div class="app">
+		<!-- ── Dashboard ─────────────────────────── -->
+		<section id="screenDashboard">
+			<div class="greet">
+				<h2><span data-i18n="greet.hi"></span>, <span id="userName"></span> 👋</h2>
+				<div class="sub" data-i18n="greet.sub"></div>
+			</div>
+
+			<div class="stats" id="stats"></div>
+
+			<div id="shipList"><div class="spinner"></div></div>
+			<div class="empty" id="emptyState" style="display:none">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="7" width="12" height="13" rx="2"/><path d="M15 12h6v6a2 2 0 0 1-2 2h-1"/><circle cx="7.5" cy="17.5" r="1.2" fill="currentColor"/><circle cx="17" cy="17.5" r="1.2" fill="currentColor"/></svg>
+				<h3 data-i18n="no.data"></h3>
+			</div>
+		</section>
+
+		<!-- ── Delivery form ─────────────────────── -->
+		<section id="screenDelivery" style="display:none">
+			<a class="back" onclick="DeliveryUI.goDashboard()">‹ <span data-i18n="back"></span></a>
+
+			<div class="card" id="shipHeader"></div>
+
+			<div class="steps" id="steps"></div>
+
+			<div class="section">
+				<div class="section-title">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
+					<span data-i18n="delivery.title"></span>
+				</div>
+				<div class="card">
+					<div class="field">
+						<label><span data-i18n="field.status"></span> <span class="req">*</span></label>
+						<select id="fStatus">
+							<option value="Delivered" data-i18n="stat.delivered"></option>
+							<option value="Partially Delivered" data-i18n="partially"></option>
+							<option value="Failed" data-i18n="stat.failed"></option>
+						</select>
+					</div>
+					<div class="field" id="fReceivedWrap">
+						<label><span data-i18n="field.received"></span> <span class="req">*</span></label>
+						<input id="fReceived" type="text" data-i18n="field.received.ph">
+					</div>
+					<div class="field">
+						<label><span data-i18n="field.remark"></span></label>
+						<textarea id="fRemark" data-i18n="field.remark.ph"></textarea>
+					</div>
+				</div>
+			</div>
+
+			<div class="section">
+				<div class="section-title">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><circle cx="11" cy="11" r="2"/></svg>
+					<span data-i18n="sig.title"></span>
+				</div>
+				<div class="card">
+					<div class="sig-wrap" id="sigWrap"><canvas id="sigCanvas" width="520" height="200"></canvas></div>
+					<div class="sig-tools">
+						<button class="icon-btn" id="sigClearBtn" onclick="Signature.clear()" style="flex:1" data-i18n="sig.clear">Clear</button>
+						<button class="icon-btn" id="sigUndoBtn" onclick="Signature.undo()" style="flex:1" data-i18n="sig.undo">Undo</button>
+					</div>
+					<div class="sig-status" id="sigStatus">
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>
+						<span data-i18n="sig.hint"></span>
+					</div>
+				</div>
+			</div>
+
+			<div class="section">
+				<div class="section-title">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+					<span data-i18n="photo.title"></span>
+				</div>
+				<div class="card">
+					<div class="photo-box" id="photoBox">
+						<div class="photo-empty" id="photoEmpty"><div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><div data-i18n="photo.empty"></div></div></div>
+						<img id="photoPreview" style="display:none" alt="">
+						<input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none">
+					</div>
+					<br>
+					<button class="btn ghost big" id="photoBtn" onclick="document.getElementById('photoInput').click()">
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+						<span data-i18n="photo.take"></span>
+					</button>
+				</div>
+			</div>
+
+			<div class="section">
+				<div class="section-title">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+					<span data-i18n="loc.title"></span>
+				</div>
+				<div class="card">
+					<div class="loc-card" id="locCard" style="display:none">
+						<span class="loc-icon" id="locIcon">📍</span>
+						<div class="loc-body">
+							<div class="t" id="locTitle"></div>
+							<div class="s" id="locSub"></div>
+						</div>
+					</div>
+					<button class="btn ghost big" id="locBtn" onclick="Loc.capture()">
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
+						<span data-i18n="loc.capture"></span>
+					</button>
+					<div class="loc-preview" id="locPreview" style="display:none"><div id="locMap"></div></div>
+				</div>
+			</div>
+
+			<div style="height:18px"></div>
+			<button class="btn big success" id="submitBtn" onclick="DeliveryUI.submit()">
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>
+				<span data-i18n="submit"></span>
+			</button>
+		</section>
+
+		<!-- ── Success ───────────────────────────── -->
+		<section id="screenSuccess" style="display:none">
+			<div class="done-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg></div>
+			<div class="done-title" data-i18n="success.title"></div>
+			<div class="done-sub" data-i18n="success.sub"></div>
+			<div class="card" style="margin-top:22px" id="successCard"></div>
+			<div style="height:16px"></div>
+			<button class="btn big" onclick="DeliveryUI.goDashboard()" data-i18n="new.delivery">Back to shipments</button>
+		</section>
+	</div>
+
+	<div id="toast"></div>
+
+	<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+	<script>
+		window.TD_CONFIG = {
+			csrf_token: "{{ csrf_token }}",
+			user: "{{ user_email }}",
+			user_fullname: "{{ user_fullname }}",
+			is_manager: {{ 1 if is_manager else 0 }}
+		};
+	</script>
+	<script src="/assets/tameer_delivery/js/delivery_core.js"></script>
+	<script>
+		/* ─── Signature pad ─────────────────────────────── */
+		window.Signature = (function () {
+			const canvas = document.getElementById("sigCanvas");
+			const ctx = canvas.getContext("2d");
+			const statusEl = document.getElementById("sigStatus");
+			let drawing = false, hasInk = false;
+			const strokes = [];
+			let current = [];
+
+			function resize() {
+				const wrap = document.getElementById("sigWrap");
+				const w = wrap.clientWidth;
+				if (w > 0) {
+					const ratio = canvas.width / canvas.height;
+					canvas.style.height = Math.max(150, Math.min(200, w / ratio)) + "px";
+				}
+			}
+
+			function pos(e) {
+				const r = canvas.getBoundingClientRect();
+				const x = (e.clientX - r.left) * (canvas.width / r.width);
+				const y = (e.clientY - r.top) * (canvas.height / r.height);
+				return [x, y];
+			}
+
+			function start(e) {
+				e.preventDefault();
+				drawing = true;
+				current = [pos(e.touches ? e.touches[0] : e)];
+				ctx.lineWidth = 2.6;
+				ctx.lineCap = "round";
+				ctx.lineJoin = "round";
+				ctx.strokeStyle = "#111";
+				ctx.beginPath();
+			}
+
+			function move(e) {
+				if (!drawing) return;
+				e.preventDefault();
+				const p = pos(e.touches ? e.touches[0] : e);
+				ctx.lineTo(p[0], p[1]);
+				ctx.stroke();
+				current.push(p);
+			}
+
+			function end(e) {
+				if (!drawing) return;
+				drawing = false;
+				if (current.length) strokes.push(current.slice());
+				current = [];
+				hasInk = true;
+				statusEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--success)"><path d="M20 6 9 17l-5-5"/></svg> ' + TD.t("sig.done");
+			}
+
+			function redraw() {
+				ctx.clearRect(0, 0, canvas.width, canvas.height);
+				ctx.lineWidth = 2.6; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = "#111";
+				strokes.forEach(function (stroke) {
+					if (!stroke.length) return;
+					ctx.beginPath();
+					ctx.moveTo(stroke[0][0], stroke[0][1]);
+					stroke.forEach(function (p) { ctx.lineTo(p[0], p[1]); });
+					ctx.stroke();
+				});
+				hasInk = strokes.length > 0;
+				statusEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg> ' + (hasInk ? TD.t("sig.done") : TD.t("sig.hint"));
+			}
+
+			canvas.addEventListener("pointerdown", start);
+			canvas.addEventListener("pointermove", move);
+			window.addEventListener("pointerup", end);
+			window.addEventListener("pointerout", end);
+			canvas.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+			document.getElementById("sigClearBtn").addEventListener("click", function () { strokes.length = 0; redraw(); });
+			document.getElementById("sigUndoBtn").addEventListener("click", function () { strokes.pop(); redraw(); });
+			window.addEventListener("resize", resize);
+			resize();
+
+			return {
+				empty: function () { return !hasInk || strokeArea() < 0.004; },
+				dataURL: function () { return canvas.toDataURL("image/png"); },
+				reset: function () { strokes.length = 0; redraw(); }
+			};
+
+			function strokeArea() {
+				if (!hasInk) return 0;
+				const d = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height).data;
+				let n = 0;
+				for (let i = 3; i < d.length; i += 4) if (d[i] > 0) n++;
+				return n / (d.length / 4);
+			}
+		})();
+	</script>
+	<script>
+		/* ─── Live location tracking ────────────────────── */
+		window.LiveTrack = (function () {
+			let watchId = null, lastSent = 0, lastLat = 0, lastLng = 0, running = false;
+			const GEOPTS = { enableHighAccuracy: true, maximumAge: 15000, timeout: 20000 };
+			function ping() {
+				const now = Date.now();
+				if (lastLat === 0 && lastLng === 0) return;
+				if (now - lastSent < 15000) return;
+				lastSent = now;
+				TD.api("tameer_delivery.api.update_driver_location", {
+					latitude: lastLat, longitude: lastLng, accuracy: window.LiveTrack._acc,
+					speed: window.LiveTrack._speed,
+					device: navigator.userAgent.match(/iPhone|iPad|Android/i) ? navigator.userAgent.match(/iPhone|iPad|Android/i)[0] : "Web"
+				}).catch(function (e) { if (e && e.exc_type === "PermissionError") stop(); });
+			}
+			function start() {
+				if (running) return;
+				running = true;
+				if (!navigator.geolocation) return;
+				document.getElementById("liveInd").style.display = "flex";
+				watchId = navigator.geolocation.watchPosition(function (p) {
+					lastLat = p.coords.latitude; lastLng = p.coords.longitude;
+					LiveTrack._acc = p.coords.accuracy; LiveTrack._speed = p.coords.speed;
+					ping();
+				}, function () {}, GEOPTS);
+				setInterval(ping, 15000);
+			}
+			function stop() {
+				running = false;
+				if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+				const el = document.getElementById("liveInd"); if (el) el.style.display = "none";
+			}
+			return { start: start, stop: stop, _acc: null, _speed: null };
+		})();
+
+		/* ─── Location capture for delivery ─────────────── */
+		window.Loc = (function () {
+			let map = null, marker = null, coords = null;
+			const btn = document.getElementById("locBtn");
+			const card = document.getElementById("locCard");
+			const preview = document.getElementById("locPreview");
+
+			function showMap() {
+				preview.style.display = "block";
+				if (!map) {
+					map = L.map("locMap", { zoomControl: false, attributionControl: true }).setView([coords.lat, coords.lng], 15);
+					L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+						maxZoom: 19, attribution: '&copy; OpenStreetMap'
+					}).addTo(map);
+					marker = L.marker([coords.lat, coords.lng]).addTo(map);
+				} else {
+					map.setView([coords.lat, coords.lng], 15);
+					if (marker) marker.setLatLng([coords.lat, coords.lng]);
+					else marker = L.marker([coords.lat, coords.lng]).addTo(map);
+				}
+				setTimeout(function () { if (map) map.invalidateSize(); }, 60);
+			}
+
+			return {
+				coords: function () { return coords; },
+				capture: function () {
+					if (!navigator.geolocation) { TD.toast(TD.t("loc.unavailable"), "err"); return; }
+					document.getElementById("locTitle").textContent = TD.t("loc.looking");
+					document.getElementById("locSub").textContent = "…";
+					card.style.display = "flex";
+					btn.disabled = true;
+					navigator.geolocation.getCurrentPosition(function (p) {
+						coords = { lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy };
+						document.getElementById("locIcon").textContent = "✅";
+						document.getElementById("locTitle").textContent = TD.t("loc.done");
+						document.getElementById("locSub").textContent =
+							coords.lat.toFixed(6) + ", " + coords.lng.toFixed(6) + " · " + TD.t("loc.acc") + " ±" + Math.round(coords.acc) + "m";
+						btn.disabled = false;
+						btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/><path d="M12 7v5l3 2"/></svg> ' + TD.t("loc.recapture");
+						showMap();
+					}, function (err) {
+						coords = null;
+						document.getElementById("locIcon").textContent = "⚠️";
+						document.getElementById("locTitle").textContent =
+							err.code === 1 ? TD.t("loc.denied") : err.code === 3 ? TD.t("loc.fail") + " " + TD.t("err.retry") : TD.t("loc.fail");
+						document.getElementById("locSub").textContent = err.code === 1 && location.protocol !== "https:" ? TD.t("loc.secure") : "";
+						btn.disabled = false;
+					}, { enableHighAccuracy: true, timeout: 20000, maximumAge: 2000 });
+				},
+				has: function () { return !!coords; }
+			};
+		})();
+
+		/* ─── Dashboard + form UI ───────────────────────── */
+		window.DeliveryUI = (function () {
+			const $ = function (id) { return document.getElementById(id); };
+			let shipments = [], filter = "All", current = null, form = {};
+
+			function statusPill(code) {
+				const cls = { "Not Delivered": "ps-Not", "In Transit": "ps-In", "Delivered": "ps-Delivered", "Failed": "ps-Failed" }[code] || "ps-Not";
+				const label = { "Not Delivered": TD.t("not.delivered"), "In Transit": TD.t("in.transit"), "Delivered": TD.t("stat.delivered"), "Failed": TD.t("stat.failed") }[code] || code;
+				return '<span class="pill ' + cls + '"><span class="dot"></span>' + label + "</span>";
+			}
+
+			function renderStats() {
+				const counts = { All: shipments.length, "Not Delivered": 0, "In Transit": 0, Delivered: 0, Failed: 0 };
+				shipments.forEach(function (s) {
+					const k = (s.delivery_status || "Not Delivered") in counts ? s.delivery_status : "Not Delivered";
+					counts[k]++;
+				});
+				const defs = [
+					["stat.pending", "Not Delivered", "warning"],
+					["stat.transit", "In Transit", "primary"],
+					["stat.delivered", "Delivered", "success"],
+					["stat.failed", "Failed", "danger"]
+				];
+				$("stats").innerHTML = defs.map(function (d) {
+					const code = d[1];
+					const col = d[2];
+					return '<div class="stat ' + (filter === code ? "s-active" : "") + '" onclick="DeliveryUI.setFilter(\'' + code + '\')">'
+						+ '<span class="dot" style="background:var(--' + col + ');box-shadow:0 0 8px var(--' + col + '-glow)"></span>'
+						+ '<div class="n">' + counts[code] + "</div><div class=\"l\">" + TD.t(d[0]) + "</div></div>";
+				}).join("");
+			}
+
+			function renderList() {
+				const list = shipments.filter(function (s) {
+					if (filter === "All") return true;
+					return (s.delivery_status || "Not Delivered") === filter;
+				});
+				if (!list.length) {
+					$("shipList").style.display = "none";
+					$("emptyState").style.display = "block";
+					const msgs = {
+						All: "no.assign", "Not Delivered": "no.pending", "In Transit": "no.transit",
+						Delivered: "no.delivered", Failed: "no.failed"
+					};
+					$("emptyState").querySelector("h3").textContent = TD.t(msgs[filter] || "no.assign");
+					return;
+				}
+				$("emptyState").style.display = "none";
+				$("shipList").style.display = "block";
+				$("shipList").innerHTML = list.map(function (s) {
+					return '<div class="card tappable" onclick="DeliveryUI.open(\'' + s.name + '\')">'
+						+ '<div class="card-head"><span class="card-title">#' + TD.esc(s.name)
+						+ (s.proof ? " <svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"var(--success)\" stroke-width=\"2.4\" style=\"vertical-align:-2px\"><path d=\"M20 6 9 17l-5-5\"/></svg>" : "")
+						+ "</span><div style=\"flex:1\"></div>" + statusPill(s.delivery_status || "Not Delivered") + "</div>"
+						+ '<div class="card-meta">'
+						+ '<div class="mi">🏢 <span><b>' + TD.esc(s.delivery_customer || s.delivery_to || "—") + "</b></span></div>"
+						+ (s.delivery_address ? '<div class="mi">📍 <span>' + TD.esc(s.delivery_address) + "</span></div>" : "")
+						+ '<div class="mi" style="color:var(--text-faint)">📦 ' + TD.t("tap.details") + " ›</div>"
+						+ "</div></div>";
+				}).join("");
+			}
+
+			function filterBtn(txt, key) {
+				return '<button class="tab ' + (filter === key ? "active" : "") + '" onclick="DeliveryUI.setFilter(\'' + key + '\')">' + txt + "</button>";
+			}
+
+			return {
+				setFilter: function (f) { filter = f; renderStats(); renderList(); },
+				load: function () {
+					TD.api("tameer_delivery.api.get_assigned_shipments").then(function (data) {
+						shipments = data || [];
+						renderStats(); renderList();
+						$("userName").textContent = TD_CONFIG.user_fullname.split(" ")[0] || TD_CONFIG.user;
+					}).catch(function () {
+						$("shipList").innerHTML = '<div class="empty"><h3>' + TD.t("err.network") + "</h3></div>";
+					});
+				},
+				open: function (name) {
+					$("shipList").innerHTML = '<div class="spinner"></div>';
+					TD.api("tameer_delivery.api.get_shipment_detail", { shipment: name }).then(function (d) {
+						current = d;
+						form = {};
+						$("screenDashboard").style.display = "none";
+						$("screenSuccess").style.display = "none";
+						$("screenDelivery").style.display = "block";
+						renderHeader(d);
+						$("fStatus").value = d.delivery_status === "Delivered" ? "Delivered" : "Delivered";
+						$("fReceived").value = "";
+						$("fRemark").value = "";
+						$("steps").innerHTML =
+							'<div class="step done"></div><div class="step done"></div><div class="step done"></div><div class="step done"></div>';
+						Signature.reset();
+						Loc.capture(); // pre-capture location on open
+						window.scrollTo(0, 0);
+					}).catch(function (e) {
+						$("shipList").innerHTML = '<div class="empty"><h3>' + (e.exc_type === "PermissionError" ? TD.t("err.perm") : TD.t("err.network")) + "</h3></div>";
+						TD.toast(TD.t("err.network"), "err");
+					});
+				},
+				goDashboard: function () {
+					$("screenDelivery").style.display = "none";
+					$("screenSuccess").style.display = "none";
+					$("screenDashboard").style.display = "block";
+					DeliveryUI.load();
+				},
+				submit: function () {
+					if (!form) form = {};
+					const received = $("fReceived").value.trim();
+					const status = $("fStatus").value;
+					const remark = $("fRemark").value.trim();
+					if (status !== "Failed" && !received) { TD.toast(TD.t("err.received"), "err"); $("fReceived").focus(); return; }
+					if (status !== "Failed") {
+						if (Signature.empty()) { TD.toast(TD.t("err.signature"), "err"); return; }
+						if (!$("photoPreview").src) { TD.toast(TD.t("err.photo"), "err"); return; }
+						if (!Loc.has()) { TD.toast(TD.t("err.location"), "err"); return; }
+					}
+
+					const btn = $("submitBtn");
+					btn.disabled = true;
+					btn.innerHTML = TD.t("submitting") + "…";
+
+					const jobs = [];
+					if (status !== "Failed") {
+						if (Signature.empty()) jobs.push(null);
+						jobs.push(TD.uploadFile(Signature.dataURL(), "signature_"+current.shipment+".png").then(function (m) { return m.file_url; }));
+						jobs.push(TD.uploadFile($("photoPreview").src, "proof_"+current.shipment+".jpg").then(function (m) { return m.file_url; }));
+					}
+					frappeAll(jobs).then(function (urls) {
+						const coords = Loc.has() ? Loc.coords() : null;
+						return TD.api("tameer_delivery.api.submit_delivery_proof", {
+							shipment: current.shipment,
+							received_by: received || null,
+							delivery_status: status,
+							signature: urls ? urls[0] : null,
+							proof_photo: urls ? urls[1] : null,
+							latitude: coords ? coords.lat : null,
+							longitude: coords ? coords.lng : null,
+							geo_accuracy: coords ? coords.acc : null,
+							remark: remark || null
+						});
+					}).then(function (res) {
+						$("screenDelivery").style.display = "none";
+						$("screenSuccess").style.display = "block";
+						$("successCard").innerHTML =
+							'<div class="kv"><b>' + TD.t("proof.no") + "</b><span>#" + TD.esc(res.name) + "</span></div>"
+							+ '<div class="kv"><b>' + TD.t("shipment") + "</b><span>#" + TD.esc(current.shipment) + "</span></div>"
+							+ '<div class="kv"><b>' + TD.t("success.title") + "</b><span>" + statusPill(res.delivery_status) + "</span></div>"
+							+ '<div class="kv"><b>' + TD.t("last.ping") + "</b><span>" + TD.fmtDateTime(res.delivery_datetime) + "</span></div>";
+						window.scrollTo(0, 0);
+						DeliveryUI.load();
+					}).catch(function (e) {
+						btn.disabled = false;
+						btn.innerHTML = TD.t("submit");
+						console.error(e);
+						TD.toast(e.exc_type ? TD.t("err.perm") : TD.t("err.network"), "err");
+					});
+				}
+			};
+
+			function frappeAll(promises) {
+				const filtered = promises.filter(function (p) { return p; });
+				if (!filtered.length) return Promise.resolve([]);
+				return Promise.all(filtered);
+			}
+
+			function renderHeader(d) {
+				const parcels = d.parcels ? d.parcels.length : 0;
+				$("shipHeader").innerHTML =
+					'<div class="card-head"><span class="card-title">#' + TD.esc(d.shipment) + "</span><div style=\"flex:1\"></div>" + statusPill(d.delivery_status || "Not Delivered") + "</div>"
+					+ '<div class="card-meta">'
+					+ '<div class="mi">🏢 <span><b>' + TD.esc(d.customer || d.delivery_to || "—") + "</b></span></div>"
+					+ (d.delivery_address ? '<div class="mi">📍 <span>' + TD.esc(d.delivery_address) + "</span></div>" : "")
+					+ (d.delivery_contact ? '<div class="mi">📞 <span>' + TD.esc(d.delivery_contact) + "</span></div>" : "")
+					+ '<div class="mi">📦 <span>' + parcels + " " + TD.t("parcels").toLowerCase()
+						+ (d.pickup_date ? " · " + TD.t("pickup.date") + " " + TD.fmtDateTime(d.pickup_date) : "")
+						+ "</span></div>"
+					+ "</div>";
+			}
+		})();
+
+		(function () {
+			$photoInput = document.getElementById("photoInput");
+			$photoInput.addEventListener("change", function () {
+				const file = $photoInput.files[0];
+				if (!file) return;
+				const reader = new FileReader();
+				reader.onload = function (e) {
+					document.getElementById("photoEmpty").style.display = "none";
+					const img = document.getElementById("photoPreview");
+					img.src = e.target.result;
+					img.style.display = "block";
+					document.getElementById("photoBtn").innerHTML =
+						'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> '
+						+ TD.t("photo.retake");
+				};
+				reader.readAsDataURL(file);
+			});
+
+			document.getElementById("fStatus").addEventListener("change", function () {
+				const failed = this.value === "Failed";
+				document.getElementById("fReceivedWrap").style.display = failed ? "none" : "block";
+			});
+
+			LiveTrack.start();
+			DeliveryUI.load();
+
+			window.addEventListener("pagehide", function () { LiveTrack.stop(); });
+			window.addEventListener("pageshow", function () { LiveTrack.start(); });
+		})();
+	</script>
+</body>
+</html>
